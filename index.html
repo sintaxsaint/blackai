@@ -159,11 +159,9 @@
         visionModel = await pipeline('image-to-text', 'Xenova/vit-gpt2-image-captioning');
         console.log("[BlackAI] Vision model loaded ✓");
 
-        // Load text model - using TinyLlama for better chat
+        // Load text model - using GPT-2 (small, reliable, browser-safe)
         console.log("[BlackAI] Loading text model...");
-        textModel = await pipeline('text-generation', 'Xenova/TinyLlama-1.1B-Chat-v1.0', {
-          quantized: true
-        });
+        textModel = await pipeline('text-generation', 'Xenova/distilgpt2');
         console.log("[BlackAI] Text model loaded ✓");
 
         modelsReady = true;
@@ -286,12 +284,32 @@
       }
 
       console.log("[BlackAI] Analyzing image...");
-      const img = new Image();
-      img.src = imageUrl;
-      await new Promise(resolve => img.onload = resolve);
-
-      const result = await visionModel(img);
-      return result[0].generated_text;
+      
+      try {
+        // Create image element from data URL
+        const img = new Image();
+        img.crossOrigin = "anonymous";
+        img.src = imageUrl;
+        
+        // Wait for image to load
+        await new Promise((resolve, reject) => {
+          img.onload = resolve;
+          img.onerror = reject;
+        });
+        
+        console.log("[BlackAI] Image loaded, running inference...");
+        
+        // Pass the image element directly (not URL)
+        const result = await visionModel(img);
+        
+        console.log("[BlackAI] Analysis result:", result);
+        
+        return result[0].generated_text;
+        
+      } catch (err) {
+        console.error("[BlackAI] Image analysis error:", err);
+        throw new Error(`Image analysis failed: ${err.message}`);
+      }
     }
 
     // ==== GENERATE TEXT ==== //
@@ -307,7 +325,7 @@
       
       // Math questions
       if (lowerPrompt.includes('what is') || lowerPrompt.includes('what\'s')) {
-        const mathMatch = lowerPrompt.match(/(\d+)\s*\+\s*(\d+)/);
+        const mathMatch = lowerPrompt.match(/(\d+)\s*[\+\s]+\s*(\d+)/);
         if (mathMatch) {
           const result = parseInt(mathMatch[1]) + parseInt(mathMatch[2]);
           return `${mathMatch[1]} + ${mathMatch[2]} = ${result}`;
@@ -319,7 +337,7 @@
           return `${subMatch[1]} - ${subMatch[2]} = ${result}`;
         }
         
-        const multMatch = lowerPrompt.match(/(\d+)\s*\*\s*(\d+)/);
+        const multMatch = lowerPrompt.match(/(\d+)\s*[\*x×]\s*(\d+)/);
         if (multMatch) {
           const result = parseInt(multMatch[1]) * parseInt(multMatch[2]);
           return `${multMatch[1]} × ${multMatch[2]} = ${result}`;
@@ -336,34 +354,67 @@
         return "I'm working great! Ready to help you with whatever you need. 😊";
       }
       
-      // Use AI model for complex questions
-      const chatPrompt = `<|system|>You are BlackAI, a helpful AI assistant. Give brief, accurate answers.<|user|>${prompt}<|assistant|>`;
-      
-      const result = await textModel(chatPrompt, {
-        max_new_tokens: 80,
-        do_sample: true,
-        temperature: 0.7,
-        top_p: 0.9,
-        repetition_penalty: 1.2
-      });
-
-      let response = result[0].generated_text;
-      
-      // Extract just the assistant's response
-      if (response.includes('<|assistant|>')) {
-        response = response.split('<|assistant|>').pop().trim();
+      // About the logo
+      if (/logo|icon|image of you/i.test(lowerPrompt)) {
+        return "My logo is the letter 'B' - stands for Black ecosystem! Simple and clean. 😎";
       }
       
-      // Clean up
-      response = response.split('<|')[0].trim();
-      response = response.split('Question:')[0].trim();
-      
-      // Fallback if response is bad
-      if (response.length < 5 || response.length > 500) {
-        return "This is the browser version of BlackAI with limited capabilities. For complex questions, try BlackAI Desktop with Qwen-7B!";
+      // How do you work
+      if (/how (do|does) (you|this|it) work/i.test(lowerPrompt)) {
+        return "I'm BlackAI, running in your browser! I use AI models for text and vision analysis. For simple questions I use quick pattern matching, and for complex stuff I use GPT-2. Want to know more about a specific feature?";
       }
+      
+      // What can you do
+      if (/what can you|what do you do|your capabilities|your features/i.test(lowerPrompt)) {
+        return "I can:\n• Answer questions (basic level)\n• Analyze images you upload\n• Do simple math\n• Have conversations\n\nFor advanced AI, download BlackAI Desktop with Qwen-7B!";
+      }
+      
+      // For everything else, use GPT-2 with careful prompting
+      const formattedPrompt = `Q: ${prompt}\nA:`;
+      
+      try {
+        const result = await textModel(formattedPrompt, {
+          max_new_tokens: 50,
+          temperature: 0.7,
+          top_p: 0.9,
+          repetition_penalty: 1.3,
+          do_sample: true
+        });
 
-      return response;
+        let response = result[0].generated_text;
+        
+        // Extract answer part
+        if (response.includes('A:')) {
+          const parts = response.split('A:');
+          response = parts[parts.length - 1].trim();
+        }
+        
+        // Remove the original prompt
+        response = response.replace(formattedPrompt, '').trim();
+        
+        // Stop at double newline or new question
+        const stopPoint = response.search(/\n\n|Q:|Question:/);
+        if (stopPoint > 0) {
+          response = response.substring(0, stopPoint).trim();
+        }
+        
+        // Clean up repetition
+        const sentences = response.split('. ');
+        if (sentences.length > 3) {
+          response = sentences.slice(0, 2).join('. ') + '.';
+        }
+        
+        // Validation
+        if (response.length < 10 || response.length > 300 || response.includes('undefined')) {
+          return "I'm the basic browser version of BlackAI. For complex questions, download BlackAI Desktop with Qwen-7B for much better answers!";
+        }
+
+        return response;
+        
+      } catch (err) {
+        console.warn("[BlackAI] GPT-2 generation failed:", err);
+        return "I'm having trouble with that question. This is the browser version - try BlackAI Desktop for better AI responses!";
+      }
     }
 
     // ==== SEND MESSAGE ==== //
