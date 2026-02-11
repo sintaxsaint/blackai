@@ -1,106 +1,48 @@
 <!DOCTYPE html>
+
 <html lang="en">
 <head>
   <!-- Basic Meta Tags -->
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>BlackAI - Free AI Vision Assistant | Image Analysis & Question Answering</title>
-  <meta name="description" content="BlackAI is a free AI assistant with advanced vision capabilities. Upload images and get instant intelligent analysis and answers.">
-  <meta name="keywords" content="AI vision, image analysis, AI assistant, BlackAI, free AI, image recognition, multimodal AI">
+  <title>BlackAI - Free General AI Assistant | Text & Vision</title>
+  <meta name="description" content="BlackAI is a free general-purpose AI assistant. Chat, analyze images, get homework help, and more - all powered by advanced AI.">
+  <meta name="keywords" content="AI assistant, chatbot, image analysis, BlackAI, free AI, homework help, general AI">
   <meta name="author" content="BlackAI">
   <meta name="robots" content="index, follow">
 
   <!-- Favicon -->
-  <link rel="shortcut icon" type="image/x-icon" href="/B.ico">
-  <link rel="icon" type="image/x-icon" href="/B.ico">
+
+  <link rel="shortcut icon" type="image/x-icon" href="B.ico">
+  <link rel="icon" type="image/x-icon" href="B.ico">
 
   <!-- Tailwind CSS -->
+
   <script src="https://cdn.tailwindcss.com"></script>
 
-  <!-- Transformers.js for Browser-based AI -->
-  <script type="module">
-    import { pipeline, env } from 'https://cdn.jsdelivr.net/npm/@huggingface/transformers@3.1.2';
-    
-    env.allowLocalModels = false;
-    
-    let visionModel = null;
-    let isModelLoading = false;
-    let modelLoaded = false;
-
-    async function loadModel() {
-      if (modelLoaded || isModelLoading) return;
-      isModelLoading = true;
-      
-      window.setStatus("Loading AI model (first time only, ~500MB)...");
-      
-      try {
-        visionModel = await pipeline('image-to-text', 'Salesforce/blip-image-captioning-base');
-        modelLoaded = true;
-        window.setStatus("Model loaded! Ready to analyze images.");
-        console.log("Vision model loaded successfully");
-      } catch (err) {
-        console.error("Model loading error:", err);
-        window.setStatus("Error loading model. Please refresh the page.");
-        isModelLoading = false;
-      }
+  <style>
+    .loading-dots::after {
+      content: '';
+      animation: dots 1.5s steps(4, end) infinite;
     }
-
-    async function processMessage(text, imageDataUrl, conversationHistory) {
-      if (!modelLoaded) {
-        await loadModel();
-      }
-
-      if (!visionModel) {
-        throw new Error("Model not loaded yet. Please wait a moment.");
-      }
-
-      let response = "";
-
-      if (imageDataUrl) {
-        window.setStatus("Analyzing image...");
-        
-        const blob = await fetch(imageDataUrl).then(r => r.blob());
-        const result = await visionModel(blob);
-        const caption = result[0].generated_text;
-        
-        response = `I can see: ${caption}\n\n`;
-        
-        if (text) {
-          response += `Regarding your question "${text}":\n`;
-          response += `Based on the image showing "${caption}", `;
-          
-          const lowerText = text.toLowerCase();
-          if (lowerText.includes('what') || lowerText.includes('describe')) {
-            response += `this appears to be an image containing ${caption.toLowerCase()}.`;
-          } else if (lowerText.includes('color')) {
-            response += `I can identify the general composition but need the desktop version for detailed color analysis.`;
-          } else if (lowerText.includes('how many')) {
-            response += `I can see ${caption.toLowerCase()}. For precise counting, use the desktop version with advanced vision capabilities.`;
-          } else {
-            response += `I can confirm the image shows ${caption.toLowerCase()}.`;
-          }
-        }
-      } else if (text) {
-        response = `I'm BlackAI, I can view images or answer your questions!\n\n`;
-        response += `You can ask me to:\n`;
-        response += `• Describe what's in an image\n`;
-        response += `• Identify objects, text, or scenes\n`;
-        response += `• Answer questions about uploaded images\n\n`;
-        response += `📥 For advanced features like image generation, download BlackAI Desktop!`;
-      }
-
-      return response;
+    @keyframes dots {
+      0%, 20% { content: ''; }
+      40% { content: '.'; }
+      60% { content: '..'; }
+      80%, 100% { content: '...'; }
     }
+    .error-detail {
+      font-family: monospace;
+      font-size: 11px;
+      background: #1a1a1a;
+      padding: 8px;
+      border-radius: 4px;
+      margin-top: 8px;
+      max-height: 200px;
+      overflow-y: auto;
+    }
+  </style>
 
-    window.pyProcessMessage = processMessage;
-    window.setStatus = (msg) => {
-      document.getElementById('status').textContent = msg;
-    };
-
-    window.addEventListener('load', () => {
-      setTimeout(loadModel, 500);
-    });
-  </script>
 </head>
 <body class="bg-gray-900 text-white h-screen flex flex-col">
   <!-- Header -->
@@ -109,18 +51,29 @@
       <img src="B.ico" alt="BlackAI" class="w-10 h-10">
       <div>
         <h1 class="text-2xl font-bold">BlackAI</h1>
-        <p class="text-sm text-gray-400">AI Vision Assistant • Online Version</p>
+        <p class="text-sm text-gray-400">General AI Assistant</p>
       </div>
     </div>
-    <a href="#download" class="bg-green-600 hover:bg-green-700 px-4 py-2 rounded-lg text-sm font-medium transition-colors">
-      ⬇️ Download Desktop
-    </a>
+    <div class="text-xs text-right">
+      <div id="modelStatus" class="text-yellow-400 loading-dots">Initializing</div>
+      <div id="debugInfo" class="text-gray-500 mt-1"></div>
+    </div>
   </div>
 
   <!-- Chat Area -->
-  <div id="chat" class="flex-1 overflow-y-auto p-4 space-y-3"></div>
+
+  <div id="chat" class="flex-1 overflow-y-auto p-4 space-y-3">
+    <div class="text-center text-gray-400 py-8">
+      <p class="mb-2">💬 Ask me anything - I can help with questions, homework, analysis, and more</p>
+      <p class="text-sm mb-2">📸 Upload images for visual analysis • 💭 Or just chat normally</p>
+      <div class="text-xs text-gray-500 mt-4">
+        <p>✨ Powered by browser-based AI models</p>
+      </div>
+    </div>
+  </div>
 
   <!-- Input Area -->
+
   <div class="p-4 border-t border-gray-700">
     <!-- Image Preview -->
     <div id="imagePreview" class="hidden mb-2 relative inline-block">
@@ -133,7 +86,7 @@
         id="imgBtn"
         class="bg-gray-700 hover:bg-gray-600 px-3 py-3 rounded-lg transition-colors"
         onclick="document.getElementById('imageInput').click()"
-        title="Upload an image for analysis"
+        title="Upload an image"
       >
         <svg xmlns="http://www.w3.org/2000/svg" class="w-6 h-6" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
           <path stroke-linecap="round" stroke-linejoin="round" d="M3 7h2l2-3h10l2 3h2a1 1 0 011 1v11a1 1 0 01-1 1H3a1 1 0 01-1-1V8a1 1 0 011-1z" />
@@ -143,7 +96,7 @@
       <input
         id="input"
         class="flex-1 bg-gray-800 px-4 py-3 rounded-lg outline-none focus:ring-2 focus:ring-green-500"
-        placeholder="Upload an image and ask a question..."
+        placeholder="Ask me anything or upload an image..."
         onkeypress="if(event.key === 'Enter') sendMessage()"
       />
       <button
@@ -154,47 +107,137 @@
         Send
       </button>
     </div>
-    <div id="status" class="text-xs text-gray-500 mt-2">Loading AI model...</div>
+    <div id="status" class="text-xs text-gray-500 mt-2"></div>
   </div>
 
-  <script>
+  <script type="module">
+    console.log("[BlackAI] Starting initialization...");
+
+    // ==== GLOBAL STATE ==== //
+    let visionModel = null;
+    let textModel = null;
+    let isLoading = false;
+    let pendingImage = null;
+    let history = [];
+    let modelsReady = false;
+
+    // ==== DOM ELEMENTS ==== //
     const chat = document.getElementById("chat");
     const input = document.getElementById("input");
     const sendBtn = document.getElementById("send");
     const status = document.getElementById("status");
     const imagePreview = document.getElementById("imagePreview");
     const previewImg = document.getElementById("previewImg");
+    const modelStatus = document.getElementById("modelStatus");
+    const debugInfo = document.getElementById("debugInfo");
 
-    let history = [];
-    let isLoading = false;
-    let pendingImage = null;
-
-    function handleImageSelect(event) {
-      const file = event.target.files[0];
-      if (!file) return;
-
-      if (file.size > 10 * 1024 * 1024) {
-        alert("Image too large. Please use an image under 10MB.");
-        return;
-      }
-
-      const reader = new FileReader();
-      reader.onload = function(e) {
-        pendingImage = e.target.result;
-        previewImg.src = pendingImage;
-        imagePreview.classList.remove("hidden");
+    // ==== ERROR LOGGING ==== //
+    function logError(context, error) {
+      console.error(`[BlackAI Error - ${context}]:`, error);
+      debugInfo.textContent = `Last error: ${context}`;
+      
+      // Show detailed error in chat
+      const errorMsg = {
+        role: "error",
+        content: `Error in ${context}:\n${error.message}`,
+        detail: error.stack || error.toString()
       };
-      reader.readAsDataURL(file);
+      history.push(errorMsg);
+      render();
     }
 
-    function clearImage() {
+    // ==== LOAD MODELS ==== //
+    async function loadModels() {
+      try {
+        console.log("[BlackAI] Loading Transformers.js...");
+        modelStatus.textContent = "Loading AI libraries...";
+        
+        // Import transformers.js
+        const { pipeline, env } = await import('https://cdn.jsdelivr.net/npm/@xenova/transformers@2.17.2');
+        env.allowLocalModels = false;
+        
+        console.log("[BlackAI] Transformers.js loaded, loading models...");
+        modelStatus.textContent = "Loading AI models (1-2 min first time)...";
+        debugInfo.textContent = "Downloading models...";
+
+        // Load vision model
+        console.log("[BlackAI] Loading vision model...");
+        visionModel = await pipeline('image-to-text', 'Xenova/vit-gpt2-image-captioning');
+        console.log("[BlackAI] Vision model loaded ✓");
+
+        // Load text model  
+        console.log("[BlackAI] Loading text model...");
+        textModel = await pipeline('text2text-generation', 'Xenova/flan-t5-small');
+        console.log("[BlackAI] Text model loaded ✓");
+
+        modelsReady = true;
+        modelStatus.textContent = "✓ Ready";
+        modelStatus.className = "text-green-400";
+        debugInfo.textContent = "Models loaded successfully";
+        setStatus("Ready! Ask me anything or upload an image.");
+        
+        console.log("[BlackAI] All models loaded successfully!");
+
+      } catch (err) {
+        logError("Model Loading", err);
+        modelStatus.textContent = "❌ Load Failed";
+        modelStatus.className = "text-red-400";
+        setStatus("Failed to load AI models. See error above.");
+      }
+    }
+
+    // Start loading immediately
+    loadModels();
+
+    // ==== IMAGE HANDLING ==== //
+    window.handleImageSelect = function(event) {
+      try {
+        const file = event.target.files[0];
+        if (!file) return;
+
+        if (file.size > 10 * 1024 * 1024) {
+          alert("Image too large. Please use an image under 10MB.");
+          return;
+        }
+
+        const reader = new FileReader();
+        reader.onload = function(e) {
+          pendingImage = e.target.result;
+          previewImg.src = pendingImage;
+          imagePreview.classList.remove("hidden");
+          console.log("[BlackAI] Image loaded for upload");
+        };
+        reader.onerror = function(err) {
+          logError("Image Reading", err);
+        };
+        reader.readAsDataURL(file);
+      } catch (err) {
+        logError("Image Selection", err);
+      }
+    };
+
+    window.clearImage = function() {
       pendingImage = null;
       imagePreview.classList.add("hidden");
       previewImg.src = "";
       document.getElementById("imageInput").value = "";
-    }
+    };
 
+    // ==== RENDER CHAT ==== //
     function render() {
+      if (history.length === 0) {
+        chat.innerHTML = `
+          <div class="text-center text-gray-400 py-8">
+            <p class="mb-2">💬 Ask me anything - I can help with questions, homework, analysis, and more</p>
+            <p class="text-sm mb-2">📸 Upload images for visual analysis • 💭 Or just chat normally</p>
+            <div class="text-xs text-gray-500 mt-4">
+              <p>✨ Powered by browser-based AI models</p>
+            </div>
+          </div>
+        `;
+        return;
+      }
+
       chat.innerHTML = history.map(m => {
         const isUser = m.role === 'user';
         const isError = m.role === 'error';
@@ -205,7 +248,12 @@
 
         let imageHtml = '';
         if (m.image) {
-          imageHtml = `<img src="${m.image}" class="max-h-48 rounded mb-2" alt="Uploaded image" />`;
+          imageHtml = `<img src="${m.image}" class="max-h-48 rounded mb-2 border border-gray-600" alt="Uploaded image" />`;
+        }
+
+        let detailHtml = '';
+        if (m.detail && isError) {
+          detailHtml = `<div class="error-detail">${escapeHtml(m.detail)}</div>`;
         }
 
         return `
@@ -214,6 +262,7 @@
               <div class="text-xs opacity-75 mb-1">${label}</div>
               ${imageHtml}
               <div class="whitespace-pre-wrap">${escapeHtml(m.content)}</div>
+              ${detailHtml}
             </div>
           </div>
         `;
@@ -221,62 +270,141 @@
       chat.scrollTop = chat.scrollHeight;
     }
 
+    // ==== ESCAPE HTML ==== //
     function escapeHtml(text) {
       const div = document.createElement('div');
       div.textContent = text;
       return div.innerHTML;
     }
 
-    async function sendMessage() {
-      const text = input.value.trim();
-      if (!text && !pendingImage) return;
-      if (isLoading) return;
+    // ==== UPDATE STATUS ==== //
+    function setStatus(msg) {
+      status.textContent = msg;
+      console.log(`[BlackAI Status] ${msg}`);
+    }
 
-      const userMsg = { role: "user", content: text || "(image)" };
-      if (pendingImage) userMsg.image = pendingImage;
-      history.push(userMsg);
+    // ==== ANALYZE IMAGE ==== //
+    async function analyzeImage(imageUrl) {
+      if (!visionModel) {
+        throw new Error("Vision model not loaded yet");
+      }
 
-      const sentImage = pendingImage;
-      input.value = "";
-      clearImage();
-      render();
+      console.log("[BlackAI] Analyzing image...");
+      const img = new Image();
+      img.src = imageUrl;
+      await new Promise(resolve => img.onload = resolve);
 
-      isLoading = true;
-      sendBtn.disabled = true;
+      const result = await visionModel(img);
+      return result[0].generated_text;
+    }
 
+    // ==== GENERATE TEXT ==== //
+    async function generateText(prompt) {
+      if (!textModel) {
+        throw new Error("Text model not loaded yet");
+      }
+
+      console.log("[BlackAI] Generating text response...");
+      
+      // Keep prompt short for small model
+      const shortPrompt = prompt.length > 200 ? prompt.substring(0, 200) + "..." : prompt;
+      
+      const result = await textModel(shortPrompt, {
+        max_length: 100,
+        do_sample: true,
+        temperature: 0.7
+      });
+
+      return result[0].generated_text;
+    }
+
+    // ==== SEND MESSAGE ==== //
+    window.sendMessage = async function() {
       try {
-        if (!window.pyProcessMessage) {
-          throw new Error("AI model is still loading. Please wait a moment and try again.");
+        const text = input.value.trim();
+        if (!text && !pendingImage) return;
+        if (isLoading) return;
+        
+        if (!modelsReady) {
+          setStatus("Please wait for models to load...");
+          return;
         }
 
-        const apiHistory = history.slice(0, -1)
-          .filter(m => m.role !== 'error')
-          .map(m => ({ role: m.role, content: m.content }));
+        console.log("[BlackAI] Sending message:", text ? text.substring(0, 50) : "(image only)");
 
-        const reply = await window.pyProcessMessage(text, sentImage, apiHistory);
+        // Add user message
+        const userMsg = { role: "user", content: text || "(image)" };
+        if (pendingImage) userMsg.image = pendingImage;
+        history.push(userMsg);
+
+        const sentImage = pendingImage;
+        input.value = "";
+        clearImage();
+        render();
+
+        isLoading = true;
+        sendBtn.disabled = true;
+        setStatus(sentImage ? "Analyzing image..." : "Thinking...");
+
+        let reply = "";
+
+        if (sentImage) {
+          // Image analysis mode
+          const analysis = await analyzeImage(sentImage);
+          
+          if (text) {
+            // User asked a question about the image
+            reply = `I can see: ${analysis}\n\n`;
+            
+            // Try to answer the question
+            try {
+              const answer = await generateText(`Based on this image showing "${analysis}", ${text}`);
+              reply += `Regarding your question: ${answer}\n\n`;
+            } catch (err) {
+              console.warn("[BlackAI] Text generation failed:", err);
+              reply += `Regarding "${text}": This is the browser version with limited Q&A. For detailed questions, use BlackAI Desktop.\n\n`;
+            }
+            
+            reply += "💡 For advanced image understanding, try BlackAI Desktop.";
+          } else {
+            // Just describe the image
+            reply = analysis;
+          }
+        } else {
+          // Text-only conversation
+          try {
+            reply = await generateText(text);
+            
+            // Add helpful note for complex questions
+            if (text.length > 100) {
+              reply += "\n\n💡 For more detailed answers, try BlackAI Desktop with Qwen-7B.";
+            }
+          } catch (err) {
+            logError("Text Generation", err);
+            throw err;
+          }
+        }
 
         history.push({ role: "assistant", content: reply });
         render();
-        window.setStatus("");
+        setStatus("");
+
+        console.log("[BlackAI] Response generated successfully");
+
       } catch (err) {
-        console.error("Error:", err);
-        history.push({
-          role: "error",
-          content: `Error: ${err.message}`
-        });
-        render();
-        window.setStatus("Error occurred");
+        logError("Send Message", err);
+        setStatus("Error occurred - see message above");
       } finally {
         isLoading = false;
         sendBtn.disabled = false;
       }
-    }
+    };
 
-    history.push({
-      role: "assistant",
-      content: "Welcome to BlackAI! 👋\n\nI'm your AI vision assistant. Upload an image and I'll analyze it for you.\n\n🖼️ Online version: Fast basic image analysis\n💎 Desktop version: Advanced analysis + image generation\n\nTry uploading an image to get started!"
-    });
+    // ==== INITIAL RENDER ==== //
     render();
+    
+    console.log("[BlackAI] Initialization complete, waiting for models...");
   </script>
+
 </body>
 </html>
