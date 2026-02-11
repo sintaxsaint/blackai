@@ -1,5 +1,4 @@
 <!DOCTYPE html>
-
 <html lang="en">
 <head>
   <!-- Basic Meta Tags -->
@@ -12,12 +11,10 @@
   <meta name="robots" content="index, follow">
 
   <!-- Favicon -->
-
   <link rel="shortcut icon" type="image/x-icon" href="B.ico">
   <link rel="icon" type="image/x-icon" href="B.ico">
 
   <!-- Tailwind CSS -->
-
   <script src="https://cdn.tailwindcss.com"></script>
 
   <style>
@@ -42,7 +39,6 @@
       overflow-y: auto;
     }
   </style>
-
 </head>
 <body class="bg-gray-900 text-white h-screen flex flex-col">
   <!-- Header -->
@@ -61,7 +57,6 @@
   </div>
 
   <!-- Chat Area -->
-
   <div id="chat" class="flex-1 overflow-y-auto p-4 space-y-3">
     <div class="text-center text-gray-400 py-8">
       <p class="mb-2">💬 Ask me anything - I can help with questions, homework, analysis, and more</p>
@@ -73,7 +68,6 @@
   </div>
 
   <!-- Input Area -->
-
   <div class="p-4 border-t border-gray-700">
     <!-- Image Preview -->
     <div id="imagePreview" class="hidden mb-2 relative inline-block">
@@ -165,9 +159,11 @@
         visionModel = await pipeline('image-to-text', 'Xenova/vit-gpt2-image-captioning');
         console.log("[BlackAI] Vision model loaded ✓");
 
-        // Load text model  
+        // Load text model - using TinyLlama for better chat
         console.log("[BlackAI] Loading text model...");
-        textModel = await pipeline('text2text-generation', 'Xenova/flan-t5-small');
+        textModel = await pipeline('text-generation', 'Xenova/TinyLlama-1.1B-Chat-v1.0', {
+          quantized: true
+        });
         console.log("[BlackAI] Text model loaded ✓");
 
         modelsReady = true;
@@ -306,16 +302,68 @@
 
       console.log("[BlackAI] Generating text response...");
       
-      // Keep prompt short for small model
-      const shortPrompt = prompt.length > 200 ? prompt.substring(0, 200) + "..." : prompt;
+      // Check for simple patterns first (faster and more reliable)
+      const lowerPrompt = prompt.toLowerCase();
       
-      const result = await textModel(shortPrompt, {
-        max_length: 100,
+      // Math questions
+      if (lowerPrompt.includes('what is') || lowerPrompt.includes('what\'s')) {
+        const mathMatch = lowerPrompt.match(/(\d+)\s*\+\s*(\d+)/);
+        if (mathMatch) {
+          const result = parseInt(mathMatch[1]) + parseInt(mathMatch[2]);
+          return `${mathMatch[1]} + ${mathMatch[2]} = ${result}`;
+        }
+        
+        const subMatch = lowerPrompt.match(/(\d+)\s*-\s*(\d+)/);
+        if (subMatch) {
+          const result = parseInt(subMatch[1]) - parseInt(subMatch[2]);
+          return `${subMatch[1]} - ${subMatch[2]} = ${result}`;
+        }
+        
+        const multMatch = lowerPrompt.match(/(\d+)\s*\*\s*(\d+)/);
+        if (multMatch) {
+          const result = parseInt(multMatch[1]) * parseInt(multMatch[2]);
+          return `${multMatch[1]} × ${multMatch[2]} = ${result}`;
+        }
+      }
+      
+      // Greetings
+      if (/^(hi|hello|hey|sup|yo|wassup|what'?s up)/i.test(lowerPrompt)) {
+        return "Hey! I'm BlackAI. I can help with questions, analyze images, and more. What do you need?";
+      }
+      
+      // How are you
+      if (/how are you|you good|you ok/i.test(lowerPrompt)) {
+        return "I'm working great! Ready to help you with whatever you need. 😊";
+      }
+      
+      // Use AI model for complex questions
+      const chatPrompt = `<|system|>You are BlackAI, a helpful AI assistant. Give brief, accurate answers.<|user|>${prompt}<|assistant|>`;
+      
+      const result = await textModel(chatPrompt, {
+        max_new_tokens: 80,
         do_sample: true,
-        temperature: 0.7
+        temperature: 0.7,
+        top_p: 0.9,
+        repetition_penalty: 1.2
       });
 
-      return result[0].generated_text;
+      let response = result[0].generated_text;
+      
+      // Extract just the assistant's response
+      if (response.includes('<|assistant|>')) {
+        response = response.split('<|assistant|>').pop().trim();
+      }
+      
+      // Clean up
+      response = response.split('<|')[0].trim();
+      response = response.split('Question:')[0].trim();
+      
+      // Fallback if response is bad
+      if (response.length < 5 || response.length > 500) {
+        return "This is the browser version of BlackAI with limited capabilities. For complex questions, try BlackAI Desktop with Qwen-7B!";
+      }
+
+      return response;
     }
 
     // ==== SEND MESSAGE ==== //
@@ -405,6 +453,5 @@
     
     console.log("[BlackAI] Initialization complete, waiting for models...");
   </script>
-
 </body>
 </html>
