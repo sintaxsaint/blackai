@@ -286,21 +286,24 @@
       console.log("[BlackAI] Analyzing image...");
       
       try {
-        // Create image element from data URL
-        const img = new Image();
-        img.crossOrigin = "anonymous";
-        img.src = imageUrl;
+        // Import RawImage from transformers.js
+        const { RawImage } = await import('https://cdn.jsdelivr.net/npm/@xenova/transformers@2.17.2');
         
-        // Wait for image to load
-        await new Promise((resolve, reject) => {
-          img.onload = resolve;
-          img.onerror = reject;
-        });
+        console.log("[BlackAI] Converting image for processing...");
         
-        console.log("[BlackAI] Image loaded, running inference...");
+        // Convert data URL to blob
+        const response = await fetch(imageUrl);
+        const blob = await response.blob();
         
-        // Pass the image element directly (not URL)
-        const result = await visionModel(img);
+        console.log("[BlackAI] Creating RawImage from blob...");
+        
+        // Create RawImage from blob
+        const image = await RawImage.read(blob);
+        
+        console.log("[BlackAI] Image prepared, running inference...");
+        
+        // Run vision model
+        const result = await visionModel(image);
         
         console.log("[BlackAI] Analysis result:", result);
         
