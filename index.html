@@ -1,22 +1,13 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-  <!-- Basic Meta Tags -->
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>BlackAI - Free General AI Assistant | Text & Vision</title>
-  <meta name="description" content="BlackAI is a free general-purpose AI assistant. Chat, analyze images, get homework help, and more - all powered by advanced AI.">
-  <meta name="keywords" content="AI assistant, chatbot, image analysis, BlackAI, free AI, homework help, general AI">
-  <meta name="author" content="BlackAI">
-  <meta name="robots" content="index, follow">
-
-  <!-- Favicon -->
+  <title>BlackAI - Free AI Assistant | Text & Vision</title>
+  <meta name="description" content="BlackAI - Free AI assistant with text chat and image analysis. Powered by Qwen 1.5B running in your browser.">
   <link rel="shortcut icon" type="image/x-icon" href="B.ico">
   <link rel="icon" type="image/x-icon" href="B.ico">
-
-  <!-- Tailwind CSS -->
   <script src="https://cdn.tailwindcss.com"></script>
-
   <style>
     .loading-dots::after {
       content: '';
@@ -41,13 +32,12 @@
   </style>
 </head>
 <body class="bg-gray-900 text-white h-screen flex flex-col">
-  <!-- Header -->
   <div class="p-4 border-b border-gray-700 flex items-center justify-between">
     <div class="flex items-center gap-3">
       <img src="B.ico" alt="BlackAI" class="w-10 h-10">
       <div>
         <h1 class="text-2xl font-bold">BlackAI</h1>
-        <p class="text-sm text-gray-400">General AI Assistant</p>
+        <p class="text-sm text-gray-400">Browser AI - Qwen 1.5B</p>
       </div>
     </div>
     <div class="text-xs text-right">
@@ -56,58 +46,40 @@
     </div>
   </div>
 
-  <!-- Chat Area -->
   <div id="chat" class="flex-1 overflow-y-auto p-4 space-y-3">
     <div class="text-center text-gray-400 py-8">
-      <p class="mb-2">💬 Ask me anything - I can help with questions, homework, analysis, and more</p>
-      <p class="text-sm mb-2">📸 Upload images for visual analysis • 💭 Or just chat normally</p>
-      <div class="text-xs text-gray-500 mt-4">
-        <p>✨ Powered by browser-based AI models</p>
+      <p class="mb-2">💬 Ask me anything or upload an image for analysis</p>
+      <p class="text-sm mb-2">Powered by Qwen2.5-1.5B running in your browser</p>
+      <div class="text-xs text-gray-500 mt-4 space-y-1">
+        <p>✨ Image analysis with ViT-GPT2</p>
+        <p>🧠 Text chat with Qwen 1.5B</p>
+        <p>⚡ For advanced AI, download BlackAI Desktop (7B/32B models)</p>
       </div>
     </div>
   </div>
 
-  <!-- Input Area -->
   <div class="p-4 border-t border-gray-700">
-    <!-- Image Preview -->
     <div id="imagePreview" class="hidden mb-2 relative inline-block">
       <img id="previewImg" class="max-h-32 rounded-lg border border-gray-600" />
       <button onclick="clearImage()" class="absolute -top-2 -right-2 bg-red-600 hover:bg-red-700 text-white rounded-full w-6 h-6 flex items-center justify-center text-sm font-bold">&times;</button>
     </div>
     <div class="flex gap-2">
       <input type="file" id="imageInput" accept="image/*" class="hidden" onchange="handleImageSelect(event)" />
-      <button
-        id="imgBtn"
-        class="bg-gray-700 hover:bg-gray-600 px-3 py-3 rounded-lg transition-colors"
-        onclick="document.getElementById('imageInput').click()"
-        title="Upload an image"
-      >
+      <button id="imgBtn" class="bg-gray-700 hover:bg-gray-600 px-3 py-3 rounded-lg transition-colors" onclick="document.getElementById('imageInput').click()" title="Upload an image">
         <svg xmlns="http://www.w3.org/2000/svg" class="w-6 h-6" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
           <path stroke-linecap="round" stroke-linejoin="round" d="M3 7h2l2-3h10l2 3h2a1 1 0 011 1v11a1 1 0 01-1 1H3a1 1 0 01-1-1V8a1 1 0 011-1z" />
           <circle cx="12" cy="13" r="4" />
         </svg>
       </button>
-      <input
-        id="input"
-        class="flex-1 bg-gray-800 px-4 py-3 rounded-lg outline-none focus:ring-2 focus:ring-green-500"
-        placeholder="Ask me anything or upload an image..."
-        onkeypress="if(event.key === 'Enter') sendMessage()"
-      />
-      <button
-        id="send"
-        class="bg-green-600 hover:bg-green-700 px-6 py-3 rounded-lg font-medium transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
-        onclick="sendMessage()"
-      >
-        Send
-      </button>
+      <input id="input" class="flex-1 bg-gray-800 px-4 py-3 rounded-lg outline-none focus:ring-2 focus:ring-green-500" placeholder="Ask me anything..." onkeypress="if(event.key === 'Enter') sendMessage()" />
+      <button id="send" class="bg-green-600 hover:bg-green-700 px-6 py-3 rounded-lg font-medium transition-colors disabled:opacity-50 disabled:cursor-not-allowed" onclick="sendMessage()">Send</button>
     </div>
     <div id="status" class="text-xs text-gray-500 mt-2"></div>
   </div>
 
   <script type="module">
-    console.log("[BlackAI] Starting initialization...");
+    console.log("[BlackAI] Initializing browser version...");
 
-    // ==== GLOBAL STATE ==== //
     let visionModel = null;
     let textModel = null;
     let isLoading = false;
@@ -115,7 +87,6 @@
     let history = [];
     let modelsReady = false;
 
-    // ==== DOM ELEMENTS ==== //
     const chat = document.getElementById("chat");
     const input = document.getElementById("input");
     const sendBtn = document.getElementById("send");
@@ -125,85 +96,72 @@
     const modelStatus = document.getElementById("modelStatus");
     const debugInfo = document.getElementById("debugInfo");
 
-    // ==== ERROR LOGGING ==== //
     function logError(context, error) {
       console.error(`[BlackAI Error - ${context}]:`, error);
-      debugInfo.textContent = `Last error: ${context}`;
-      
-      // Show detailed error in chat
-      const errorMsg = {
+      debugInfo.textContent = `Error: ${context}`;
+      history.push({
         role: "error",
         content: `Error in ${context}:\n${error.message}`,
         detail: error.stack || error.toString()
-      };
-      history.push(errorMsg);
+      });
       render();
     }
 
-    // ==== LOAD MODELS ==== //
     async function loadModels() {
       try {
         console.log("[BlackAI] Loading Transformers.js...");
-        modelStatus.textContent = "Loading AI libraries...";
+        modelStatus.textContent = "Loading AI...";
         
-        // Import transformers.js
         const { pipeline, env } = await import('https://cdn.jsdelivr.net/npm/@xenova/transformers@2.17.2');
         env.allowLocalModels = false;
         
-        console.log("[BlackAI] Transformers.js loaded, loading models...");
-        modelStatus.textContent = "Loading AI models (1-2 min first time)...";
-        debugInfo.textContent = "Downloading models...";
+        modelStatus.textContent = "Loading models (~500MB first time)...";
+        debugInfo.textContent = "Downloading...";
 
-        // Load vision model
         console.log("[BlackAI] Loading vision model...");
         visionModel = await pipeline('image-to-text', 'Xenova/vit-gpt2-image-captioning');
-        console.log("[BlackAI] Vision model loaded ✓");
+        console.log("[BlackAI] Vision model ✓");
 
-        // Load text model - using GPT-2 (small, reliable, browser-safe)
-        console.log("[BlackAI] Loading text model...");
-        textModel = await pipeline('text-generation', 'Xenova/distilgpt2');
-        console.log("[BlackAI] Text model loaded ✓");
+        console.log("[BlackAI] Loading Qwen 1.5B text model...");
+        textModel = await pipeline('text-generation', 'Xenova/Qwen2.5-1.5B-Instruct', {
+          dtype: 'q8'  // 8-bit quantization for browser
+        });
+        console.log("[BlackAI] Text model ✓");
 
         modelsReady = true;
         modelStatus.textContent = "✓ Ready";
         modelStatus.className = "text-green-400";
-        debugInfo.textContent = "Models loaded successfully";
-        setStatus("Ready! Ask me anything or upload an image.");
+        debugInfo.textContent = "Qwen 1.5B loaded";
+        setStatus("Ready! Ask me anything.");
         
-        console.log("[BlackAI] All models loaded successfully!");
+        console.log("[BlackAI] All models loaded!");
 
       } catch (err) {
         logError("Model Loading", err);
         modelStatus.textContent = "❌ Load Failed";
         modelStatus.className = "text-red-400";
-        setStatus("Failed to load AI models. See error above.");
+        setStatus("Failed to load. Refresh page.");
       }
     }
 
-    // Start loading immediately
     loadModels();
 
-    // ==== IMAGE HANDLING ==== //
     window.handleImageSelect = function(event) {
       try {
         const file = event.target.files[0];
         if (!file) return;
-
         if (file.size > 10 * 1024 * 1024) {
-          alert("Image too large. Please use an image under 10MB.");
+          alert("Image too large. Max 10MB.");
           return;
         }
-
         const reader = new FileReader();
         reader.onload = function(e) {
           pendingImage = e.target.result;
           previewImg.src = pendingImage;
           imagePreview.classList.remove("hidden");
-          console.log("[BlackAI] Image loaded for upload");
+          console.log("[BlackAI] Image loaded");
         };
-        reader.onerror = function(err) {
-          logError("Image Reading", err);
-        };
+        reader.onerror = (err) => logError("Image Reading", err);
         reader.readAsDataURL(file);
       } catch (err) {
         logError("Image Selection", err);
@@ -217,15 +175,16 @@
       document.getElementById("imageInput").value = "";
     };
 
-    // ==== RENDER CHAT ==== //
     function render() {
       if (history.length === 0) {
         chat.innerHTML = `
           <div class="text-center text-gray-400 py-8">
-            <p class="mb-2">💬 Ask me anything - I can help with questions, homework, analysis, and more</p>
-            <p class="text-sm mb-2">📸 Upload images for visual analysis • 💭 Or just chat normally</p>
-            <div class="text-xs text-gray-500 mt-4">
-              <p>✨ Powered by browser-based AI models</p>
+            <p class="mb-2">💬 Ask me anything or upload an image for analysis</p>
+            <p class="text-sm mb-2">Powered by Qwen2.5-1.5B running in your browser</p>
+            <div class="text-xs text-gray-500 mt-4 space-y-1">
+              <p>✨ Image analysis with ViT-GPT2</p>
+              <p>🧠 Text chat with Qwen 1.5B</p>
+              <p>⚡ For advanced AI, download BlackAI Desktop (7B/32B models)</p>
             </div>
           </div>
         `;
@@ -235,24 +194,19 @@
       chat.innerHTML = history.map(m => {
         const isUser = m.role === 'user';
         const isError = m.role === 'error';
-        const bgClass = isUser ? 'bg-green-600 text-white'
-                      : isError ? 'bg-red-600 text-white'
-                      : 'bg-gray-800 text-gray-100';
+        const bgClass = isUser ? 'bg-green-600' : isError ? 'bg-red-600' : 'bg-gray-800';
         const label = isUser ? 'You' : isError ? 'Error' : 'BlackAI';
-
         let imageHtml = '';
         if (m.image) {
-          imageHtml = `<img src="${m.image}" class="max-h-48 rounded mb-2 border border-gray-600" alt="Uploaded image" />`;
+          imageHtml = `<img src="${m.image}" class="max-h-48 rounded mb-2 border border-gray-600" />`;
         }
-
         let detailHtml = '';
         if (m.detail && isError) {
           detailHtml = `<div class="error-detail">${escapeHtml(m.detail)}</div>`;
         }
-
         return `
           <div class="${isUser ? 'text-right' : 'text-left'}">
-            <div class="inline-block max-w-2xl px-4 py-3 rounded-lg ${bgClass}">
+            <div class="inline-block max-w-2xl px-4 py-3 rounded-lg ${bgClass} text-white">
               <div class="text-xs opacity-75 mb-1">${label}</div>
               ${imageHtml}
               <div class="whitespace-pre-wrap">${escapeHtml(m.content)}</div>
@@ -264,181 +218,71 @@
       chat.scrollTop = chat.scrollHeight;
     }
 
-    // ==== ESCAPE HTML ==== //
     function escapeHtml(text) {
       const div = document.createElement('div');
       div.textContent = text;
       return div.innerHTML;
     }
 
-    // ==== UPDATE STATUS ==== //
     function setStatus(msg) {
       status.textContent = msg;
-      console.log(`[BlackAI Status] ${msg}`);
+      console.log(`[BlackAI] ${msg}`);
     }
 
-    // ==== ANALYZE IMAGE ==== //
     async function analyzeImage(imageUrl) {
-      if (!visionModel) {
-        throw new Error("Vision model not loaded yet");
-      }
-
+      if (!visionModel) throw new Error("Vision model not loaded");
       console.log("[BlackAI] Analyzing image...");
-      
-      try {
-        // Import RawImage from transformers.js
-        const { RawImage } = await import('https://cdn.jsdelivr.net/npm/@xenova/transformers@2.17.2');
-        
-        console.log("[BlackAI] Converting image for processing...");
-        
-        // Convert data URL to blob
-        const response = await fetch(imageUrl);
-        const blob = await response.blob();
-        
-        console.log("[BlackAI] Creating RawImage from blob...");
-        
-        // Create RawImage from blob
-        const image = await RawImage.read(blob);
-        
-        console.log("[BlackAI] Image prepared, running inference...");
-        
-        // Run vision model
-        const result = await visionModel(image);
-        
-        console.log("[BlackAI] Analysis result:", result);
-        
-        return result[0].generated_text;
-        
-      } catch (err) {
-        console.error("[BlackAI] Image analysis error:", err);
-        throw new Error(`Image analysis failed: ${err.message}`);
-      }
+      const { RawImage } = await import('https://cdn.jsdelivr.net/npm/@xenova/transformers@2.17.2');
+      const response = await fetch(imageUrl);
+      const blob = await response.blob();
+      const image = await RawImage.read(blob);
+      const result = await visionModel(image);
+      return result[0].generated_text;
     }
 
-    // ==== GENERATE TEXT ==== //
     async function generateText(prompt) {
-      if (!textModel) {
-        throw new Error("Text model not loaded yet");
-      }
+      if (!textModel) throw new Error("Text model not loaded");
+      console.log("[BlackAI] Generating response...");
+      
+      // Format for Qwen chat template
+      const messages = [
+        { role: "system", content: "You are BlackAI, a helpful assistant. Give brief, clear answers." },
+        { role: "user", content: prompt }
+      ];
+      
+      // Note: Transformers.js doesn't support chat templates yet, so we format manually
+      const formattedPrompt = `<|im_start|>system\nYou are BlackAI, a helpful assistant.<|im_end|>\n<|im_start|>user\n${prompt}<|im_end|>\n<|im_start|>assistant\n`;
+      
+      const result = await textModel(formattedPrompt, {
+        max_new_tokens: 200,
+        temperature: 0.7,
+        top_p: 0.9,
+        do_sample: true
+      });
 
-      console.log("[BlackAI] Generating text response...");
+      let response = result[0].generated_text;
       
-      // Check for simple patterns first (faster and more reliable)
-      const lowerPrompt = prompt.toLowerCase();
-      
-      // Math questions
-      if (lowerPrompt.includes('what is') || lowerPrompt.includes('what\'s')) {
-        const mathMatch = lowerPrompt.match(/(\d+)\s*[\+\s]+\s*(\d+)/);
-        if (mathMatch) {
-          const result = parseInt(mathMatch[1]) + parseInt(mathMatch[2]);
-          return `${mathMatch[1]} + ${mathMatch[2]} = ${result}`;
-        }
-        
-        const subMatch = lowerPrompt.match(/(\d+)\s*-\s*(\d+)/);
-        if (subMatch) {
-          const result = parseInt(subMatch[1]) - parseInt(subMatch[2]);
-          return `${subMatch[1]} - ${subMatch[2]} = ${result}`;
-        }
-        
-        const multMatch = lowerPrompt.match(/(\d+)\s*[\*x×]\s*(\d+)/);
-        if (multMatch) {
-          const result = parseInt(multMatch[1]) * parseInt(multMatch[2]);
-          return `${multMatch[1]} × ${multMatch[2]} = ${result}`;
-        }
+      // Extract assistant response
+      if (response.includes('<|im_start|>assistant\n')) {
+        response = response.split('<|im_start|>assistant\n').pop();
       }
+      response = response.split('<|im_end|>')[0].trim();
       
-      // Greetings
-      if (/^(hi|hello|hey|sup|yo|wassup|what'?s up)/i.test(lowerPrompt)) {
-        return "Hey! I'm BlackAI. I can help with questions, analyze images, and more. What do you need?";
-      }
-      
-      // How are you
-      if (/how are you|you good|you ok/i.test(lowerPrompt)) {
-        return "I'm working great! Ready to help you with whatever you need. 😊";
-      }
-      
-      // About the logo
-      if (/logo|icon|image of you/i.test(lowerPrompt)) {
-        return "My logo is the letter 'B' - stands for Black ecosystem! Simple and clean. 😎";
-      }
-      
-      // How do you work
-      if (/how (do|does) (you|this|it) work/i.test(lowerPrompt)) {
-        return "I'm BlackAI, running in your browser! I use AI models for text and vision analysis. For simple questions I use quick pattern matching, and for complex stuff I use GPT-2. Want to know more about a specific feature?";
-      }
-      
-      // What can you do
-      if (/what can you|what do you do|your capabilities|your features/i.test(lowerPrompt)) {
-        return "I can:\n• Answer questions (basic level)\n• Analyze images you upload\n• Do simple math\n• Have conversations\n\nFor advanced AI, download BlackAI Desktop with Qwen-7B!";
-      }
-      
-      // For everything else, use GPT-2 with careful prompting
-      const formattedPrompt = `Q: ${prompt}\nA:`;
-      
-      try {
-        const result = await textModel(formattedPrompt, {
-          max_new_tokens: 50,
-          temperature: 0.7,
-          top_p: 0.9,
-          repetition_penalty: 1.3,
-          do_sample: true
-        });
-
-        let response = result[0].generated_text;
-        
-        // Extract answer part
-        if (response.includes('A:')) {
-          const parts = response.split('A:');
-          response = parts[parts.length - 1].trim();
-        }
-        
-        // Remove the original prompt
-        response = response.replace(formattedPrompt, '').trim();
-        
-        // Stop at double newline or new question
-        const stopPoint = response.search(/\n\n|Q:|Question:/);
-        if (stopPoint > 0) {
-          response = response.substring(0, stopPoint).trim();
-        }
-        
-        // Clean up repetition
-        const sentences = response.split('. ');
-        if (sentences.length > 3) {
-          response = sentences.slice(0, 2).join('. ') + '.';
-        }
-        
-        // Validation
-        if (response.length < 10 || response.length > 300 || response.includes('undefined')) {
-          return "I'm the basic browser version of BlackAI. For complex questions, download BlackAI Desktop with Qwen-7B for much better answers!";
-        }
-
-        return response;
-        
-      } catch (err) {
-        console.warn("[BlackAI] GPT-2 generation failed:", err);
-        return "I'm having trouble with that question. This is the browser version - try BlackAI Desktop for better AI responses!";
-      }
+      return response || "Sorry, I couldn't generate a good response. Try rephrasing?";
     }
 
-    // ==== SEND MESSAGE ==== //
     window.sendMessage = async function() {
       try {
         const text = input.value.trim();
         if (!text && !pendingImage) return;
         if (isLoading) return;
-        
         if (!modelsReady) {
-          setStatus("Please wait for models to load...");
+          setStatus("Wait for models to load...");
           return;
         }
 
-        console.log("[BlackAI] Sending message:", text ? text.substring(0, 50) : "(image only)");
-
-        // Add user message
-        const userMsg = { role: "user", content: text || "(image)" };
-        if (pendingImage) userMsg.image = pendingImage;
-        history.push(userMsg);
-
+        console.log("[BlackAI] Processing message...");
+        history.push({ role: "user", content: text || "(image)", image: pendingImage });
         const sentImage = pendingImage;
         input.value = "";
         clearImage();
@@ -446,66 +290,46 @@
 
         isLoading = true;
         sendBtn.disabled = true;
-        setStatus(sentImage ? "Analyzing image..." : "Thinking...");
 
         let reply = "";
 
         if (sentImage) {
-          // Image analysis mode
+          setStatus("Analyzing image...");
           const analysis = await analyzeImage(sentImage);
           
           if (text) {
-            // User asked a question about the image
             reply = `I can see: ${analysis}\n\n`;
-            
-            // Try to answer the question
             try {
-              const answer = await generateText(`Based on this image showing "${analysis}", ${text}`);
-              reply += `Regarding your question: ${answer}\n\n`;
+              const answer = await generateText(`Based on seeing "${analysis}" in an image, ${text}`);
+              reply += answer;
             } catch (err) {
-              console.warn("[BlackAI] Text generation failed:", err);
-              reply += `Regarding "${text}": This is the browser version with limited Q&A. For detailed questions, use BlackAI Desktop.\n\n`;
+              console.warn("[BlackAI] Text gen failed:", err);
+              reply += "For detailed analysis, use BlackAI Desktop.";
             }
-            
-            reply += "💡 For advanced image understanding, try BlackAI Desktop.";
           } else {
-            // Just describe the image
             reply = analysis;
           }
-        } else {
-          // Text-only conversation
-          try {
-            reply = await generateText(text);
-            
-            // Add helpful note for complex questions
-            if (text.length > 100) {
-              reply += "\n\n💡 For more detailed answers, try BlackAI Desktop with Qwen-7B.";
-            }
-          } catch (err) {
-            logError("Text Generation", err);
-            throw err;
-          }
+        } else if (text) {
+          setStatus("Thinking...");
+          reply = await generateText(text);
         }
 
         history.push({ role: "assistant", content: reply });
         render();
         setStatus("");
-
-        console.log("[BlackAI] Response generated successfully");
+        console.log("[BlackAI] Done!");
 
       } catch (err) {
         logError("Send Message", err);
-        setStatus("Error occurred - see message above");
+        setStatus("Error - see above");
       } finally {
         isLoading = false;
         sendBtn.disabled = false;
       }
     };
 
-    // ==== INITIAL RENDER ==== //
     render();
-    
-    console.log("[BlackAI] Initialization complete, waiting for models...");
+    console.log("[BlackAI] Ready and waiting...");
   </script>
 </body>
 </html>
