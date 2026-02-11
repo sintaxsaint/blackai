@@ -1,0 +1,282 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <!-- Basic Meta Tags -->
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>BlackAI - Free AI Vision Assistant | Image Analysis & Question Answering</title>
+  <meta name="description" content="BlackAI is a free AI assistant with advanced vision capabilities. Upload images and get instant intelligent analysis and answers.">
+  <meta name="keywords" content="AI vision, image analysis, AI assistant, BlackAI, free AI, image recognition, multimodal AI">
+  <meta name="author" content="BlackAI">
+  <meta name="robots" content="index, follow">
+
+  <!-- Favicon -->
+  <link rel="shortcut icon" type="image/x-icon" href="/B.ico">
+  <link rel="icon" type="image/x-icon" href="/B.ico">
+
+  <!-- Tailwind CSS -->
+  <script src="https://cdn.tailwindcss.com"></script>
+
+  <!-- Transformers.js for Browser-based AI -->
+  <script type="module">
+    import { pipeline, env } from 'https://cdn.jsdelivr.net/npm/@huggingface/transformers@3.1.2';
+    
+    env.allowLocalModels = false;
+    
+    let visionModel = null;
+    let isModelLoading = false;
+    let modelLoaded = false;
+
+    async function loadModel() {
+      if (modelLoaded || isModelLoading) return;
+      isModelLoading = true;
+      
+      window.setStatus("Loading AI model (first time only, ~500MB)...");
+      
+      try {
+        visionModel = await pipeline('image-to-text', 'Salesforce/blip-image-captioning-base');
+        modelLoaded = true;
+        window.setStatus("Model loaded! Ready to analyze images.");
+        console.log("Vision model loaded successfully");
+      } catch (err) {
+        console.error("Model loading error:", err);
+        window.setStatus("Error loading model. Please refresh the page.");
+        isModelLoading = false;
+      }
+    }
+
+    async function processMessage(text, imageDataUrl, conversationHistory) {
+      if (!modelLoaded) {
+        await loadModel();
+      }
+
+      if (!visionModel) {
+        throw new Error("Model not loaded yet. Please wait a moment.");
+      }
+
+      let response = "";
+
+      if (imageDataUrl) {
+        window.setStatus("Analyzing image...");
+        
+        const blob = await fetch(imageDataUrl).then(r => r.blob());
+        const result = await visionModel(blob);
+        const caption = result[0].generated_text;
+        
+        response = `I can see: ${caption}\n\n`;
+        
+        if (text) {
+          response += `Regarding your question "${text}":\n`;
+          response += `Based on the image showing "${caption}", `;
+          
+          const lowerText = text.toLowerCase();
+          if (lowerText.includes('what') || lowerText.includes('describe')) {
+            response += `this appears to be an image containing ${caption.toLowerCase()}.`;
+          } else if (lowerText.includes('color')) {
+            response += `I can identify the general composition but need the desktop version for detailed color analysis.`;
+          } else if (lowerText.includes('how many')) {
+            response += `I can see ${caption.toLowerCase()}. For precise counting, use the desktop version with advanced vision capabilities.`;
+          } else {
+            response += `I can confirm the image shows ${caption.toLowerCase()}.`;
+          }
+        }
+      } else if (text) {
+        response = `I'm BlackAI, specialized in image analysis. Please upload an image for me to analyze!\n\n`;
+        response += `You can ask me to:\n`;
+        response += `• Describe what's in an image\n`;
+        response += `• Identify objects, text, or scenes\n`;
+        response += `• Answer questions about uploaded images\n\n`;
+        response += `📥 For advanced features like image generation, download BlackAI Desktop!`;
+      }
+
+      return response;
+    }
+
+    window.pyProcessMessage = processMessage;
+    window.setStatus = (msg) => {
+      document.getElementById('status').textContent = msg;
+    };
+
+    window.addEventListener('load', () => {
+      setTimeout(loadModel, 500);
+    });
+  </script>
+</head>
+<body class="bg-gray-900 text-white h-screen flex flex-col">
+  <!-- Header -->
+  <div class="p-4 border-b border-gray-700 flex items-center justify-between">
+    <div class="flex items-center gap-3">
+      <img src="B.ico" alt="BlackAI" class="w-10 h-10">
+      <div>
+        <h1 class="text-2xl font-bold">BlackAI</h1>
+        <p class="text-sm text-gray-400">AI Vision Assistant • Online Version</p>
+      </div>
+    </div>
+    <a href="#download" class="bg-green-600 hover:bg-green-700 px-4 py-2 rounded-lg text-sm font-medium transition-colors">
+      ⬇️ Download Desktop
+    </a>
+  </div>
+
+  <!-- Chat Area -->
+  <div id="chat" class="flex-1 overflow-y-auto p-4 space-y-3"></div>
+
+  <!-- Input Area -->
+  <div class="p-4 border-t border-gray-700">
+    <!-- Image Preview -->
+    <div id="imagePreview" class="hidden mb-2 relative inline-block">
+      <img id="previewImg" class="max-h-32 rounded-lg border border-gray-600" />
+      <button onclick="clearImage()" class="absolute -top-2 -right-2 bg-red-600 hover:bg-red-700 text-white rounded-full w-6 h-6 flex items-center justify-center text-sm font-bold">&times;</button>
+    </div>
+    <div class="flex gap-2">
+      <input type="file" id="imageInput" accept="image/*" class="hidden" onchange="handleImageSelect(event)" />
+      <button
+        id="imgBtn"
+        class="bg-gray-700 hover:bg-gray-600 px-3 py-3 rounded-lg transition-colors"
+        onclick="document.getElementById('imageInput').click()"
+        title="Upload an image for analysis"
+      >
+        <svg xmlns="http://www.w3.org/2000/svg" class="w-6 h-6" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
+          <path stroke-linecap="round" stroke-linejoin="round" d="M3 7h2l2-3h10l2 3h2a1 1 0 011 1v11a1 1 0 01-1 1H3a1 1 0 01-1-1V8a1 1 0 011-1z" />
+          <circle cx="12" cy="13" r="4" />
+        </svg>
+      </button>
+      <input
+        id="input"
+        class="flex-1 bg-gray-800 px-4 py-3 rounded-lg outline-none focus:ring-2 focus:ring-green-500"
+        placeholder="Upload an image and ask a question..."
+        onkeypress="if(event.key === 'Enter') sendMessage()"
+      />
+      <button
+        id="send"
+        class="bg-green-600 hover:bg-green-700 px-6 py-3 rounded-lg font-medium transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+        onclick="sendMessage()"
+      >
+        Send
+      </button>
+    </div>
+    <div id="status" class="text-xs text-gray-500 mt-2">Loading AI model...</div>
+  </div>
+
+  <script>
+    const chat = document.getElementById("chat");
+    const input = document.getElementById("input");
+    const sendBtn = document.getElementById("send");
+    const status = document.getElementById("status");
+    const imagePreview = document.getElementById("imagePreview");
+    const previewImg = document.getElementById("previewImg");
+
+    let history = [];
+    let isLoading = false;
+    let pendingImage = null;
+
+    function handleImageSelect(event) {
+      const file = event.target.files[0];
+      if (!file) return;
+
+      if (file.size > 10 * 1024 * 1024) {
+        alert("Image too large. Please use an image under 10MB.");
+        return;
+      }
+
+      const reader = new FileReader();
+      reader.onload = function(e) {
+        pendingImage = e.target.result;
+        previewImg.src = pendingImage;
+        imagePreview.classList.remove("hidden");
+      };
+      reader.readAsDataURL(file);
+    }
+
+    function clearImage() {
+      pendingImage = null;
+      imagePreview.classList.add("hidden");
+      previewImg.src = "";
+      document.getElementById("imageInput").value = "";
+    }
+
+    function render() {
+      chat.innerHTML = history.map(m => {
+        const isUser = m.role === 'user';
+        const isError = m.role === 'error';
+        const bgClass = isUser ? 'bg-green-600 text-white'
+                      : isError ? 'bg-red-600 text-white'
+                      : 'bg-gray-800 text-gray-100';
+        const label = isUser ? 'You' : isError ? 'Error' : 'BlackAI';
+
+        let imageHtml = '';
+        if (m.image) {
+          imageHtml = `<img src="${m.image}" class="max-h-48 rounded mb-2" alt="Uploaded image" />`;
+        }
+
+        return `
+          <div class="${isUser ? 'text-right' : 'text-left'}">
+            <div class="inline-block max-w-2xl px-4 py-3 rounded-lg ${bgClass}">
+              <div class="text-xs opacity-75 mb-1">${label}</div>
+              ${imageHtml}
+              <div class="whitespace-pre-wrap">${escapeHtml(m.content)}</div>
+            </div>
+          </div>
+        `;
+      }).join("");
+      chat.scrollTop = chat.scrollHeight;
+    }
+
+    function escapeHtml(text) {
+      const div = document.createElement('div');
+      div.textContent = text;
+      return div.innerHTML;
+    }
+
+    async function sendMessage() {
+      const text = input.value.trim();
+      if (!text && !pendingImage) return;
+      if (isLoading) return;
+
+      const userMsg = { role: "user", content: text || "(image)" };
+      if (pendingImage) userMsg.image = pendingImage;
+      history.push(userMsg);
+
+      const sentImage = pendingImage;
+      input.value = "";
+      clearImage();
+      render();
+
+      isLoading = true;
+      sendBtn.disabled = true;
+
+      try {
+        if (!window.pyProcessMessage) {
+          throw new Error("AI model is still loading. Please wait a moment and try again.");
+        }
+
+        const apiHistory = history.slice(0, -1)
+          .filter(m => m.role !== 'error')
+          .map(m => ({ role: m.role, content: m.content }));
+
+        const reply = await window.pyProcessMessage(text, sentImage, apiHistory);
+
+        history.push({ role: "assistant", content: reply });
+        render();
+        window.setStatus("");
+      } catch (err) {
+        console.error("Error:", err);
+        history.push({
+          role: "error",
+          content: `Error: ${err.message}`
+        });
+        render();
+        window.setStatus("Error occurred");
+      } finally {
+        isLoading = false;
+        sendBtn.disabled = false;
+      }
+    }
+
+    history.push({
+      role: "assistant",
+      content: "Welcome to BlackAI! 👋\n\nI'm your AI vision assistant. Upload an image and I'll analyze it for you.\n\n🖼️ Online version: Fast basic image analysis\n💎 Desktop version: Advanced analysis + image generation\n\nTry uploading an image to get started!"
+    });
+    render();
+  </script>
+</body>
+</html>
